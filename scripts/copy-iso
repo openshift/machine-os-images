@@ -1,0 +1,27 @@
+#!/bin/bash
+
+set -e
+
+ISO_DIR="/coreos"
+DEST_DIR="$1"
+
+if [ ! -d "${DEST_DIR}" ]; then
+    mkdir -p "${DEST_DIR}"
+fi
+
+copy_if_needed() {
+    local source="$1"
+    local dest_file
+
+    dest_file="${DEST_DIR}/$(basename "${source}")"
+
+    if [ -f "${dest_file}" ] && [ "$(sha256sum "${dest_file}" | cut -d' ' -f1)" = "$(cat "${source}.sha256")" ]; then
+        echo "${dest_file} is already up to date" >&2
+    else
+        cp "${source}" "${DEST_DIR}"
+    fi
+}
+
+for iso in "${ISO_DIR}"/*.iso; do
+    copy_if_needed "${iso}"
+done
