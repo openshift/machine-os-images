@@ -2,7 +2,7 @@ DIRECT_DOWNLOAD ?= true
 
 .PHONY: build
 build:
-	DIRECT_DOWNLOAD=$(DIRECT_DOWNLOAD) podman build -f Dockerfile .
+	podman build -f Dockerfile . --build-arg DIRECT_DOWNLOAD=$(DIRECT_DOWNLOAD)
 
 .PHONY: shellcheck
 shellcheck:

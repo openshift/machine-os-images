@@ -67,7 +67,7 @@ download_arch() {
     local arch="$1"
 
     if [[ "${DIRECT_DOWNLOAD:-false}" =~ [Tt]rue ]]; then
-        download_arch "${arch}"
+        download_direct_arch "${arch}"
     else
         download_lookaside_arch "${arch}"
     fi
