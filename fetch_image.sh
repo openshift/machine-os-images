@@ -49,7 +49,7 @@ download_lookaside_arch() {
     iso_sha256="$(image_data "${arch}" sha256)"
 
     local lookaside="http://pkgs.devel.redhat.com/repo"
-    local url="${lookaside}/ose-machine-os-images/${iso_file}/sha256/${iso_sha256}/${iso_file}"
+    local url="${lookaside}/containers/ose-machine-os-images/${iso_file}/sha256/${iso_sha256}/${iso_file}"
 
     download_url "${arch}" "${url}"
 }
