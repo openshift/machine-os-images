@@ -7,3 +7,5 @@ approvers:
   - jlebon
   - sadasu
   - zaneb
+component: Bare Metal Hardware Provisioning
+subcomponent: OS Image Provider
