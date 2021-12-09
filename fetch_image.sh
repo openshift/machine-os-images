@@ -5,6 +5,7 @@ set -e
 ISO_ARCH="${ISO_ARCH:-$(uname -p)}"
 OUTPUT_DIR="coreos"
 IMAGE_DATA_FILE="coreos-stream.json"
+SOURCES_FILE="/usr/share/coreos-sources"
 
 if [ ! -d "${OUTPUT_DIR}" ]; then
     mkdir -p "${OUTPUT_DIR}"
@@ -40,16 +41,27 @@ download_url() {
 }
 
 
+get_sha512() {
+    local iso_file="$1"
+
+    awk "/^SHA512 / { if (\$2 == \"(${iso_file})\") print \$4 }" "${SOURCES_FILE}" | tail -n 1
+}
+
 download_lookaside_arch() {
     local arch="$1"
 
     local iso_file
-    local iso_sha256
+    local iso_sha512
     iso_file="$(basename "$(image_data "${arch}" location)")"
-    iso_sha256="$(image_data "${arch}" sha256)"
+    iso_sha512="$(get_sha512 "${iso_file}")"
+
+    if [ -z "${iso_sha512}" ]; then
+        echo "No SHA512 sum found for ${iso_file}" >&2
+        exit 1
+    fi
 
     local lookaside="http://pkgs.devel.redhat.com/repo"
-    local url="${lookaside}/containers/ose-machine-os-images/${iso_file}/sha256/${iso_sha256}/${iso_file}"
+    local url="${lookaside}/containers/ose-installer/${iso_file}/sha512/${iso_sha512}/${iso_file}"
 
     download_url "${arch}" "${url}"
 }
