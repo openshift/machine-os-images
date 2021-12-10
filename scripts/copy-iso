@@ -15,10 +15,12 @@ copy_if_needed() {
 
     dest_file="${DEST_DIR}/$(basename "${source}")"
 
-    if [ -f "${dest_file}" ] && [ "$(sha256sum "${dest_file}" | cut -d' ' -f1)" = "$(cat "${source}.sha256")" ]; then
+    if [ -f "${dest_file}" ] && [ "$(cat "${dest_file}.sha256")" = "$(cat "${source}.sha256")" ]; then
         echo "${dest_file} is already up to date" >&2
     else
+        rm -f "${dest_file}.sha256"
         cp "${source}" "${DEST_DIR}"
+        cp "${source}.sha256" "${DEST_DIR}"
     fi
 }
 
