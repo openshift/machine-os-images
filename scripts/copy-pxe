@@ -2,6 +2,11 @@
 
 set -e
 
+if [ "$1" = "--initrd-only" ]; then
+    INITRD_ONLY=true
+    shift
+fi
+
 ISO_DIR="/coreos"
 DEST_DIR="$1"
 
@@ -11,10 +16,19 @@ extract_if_needed() {
     local dest_base
     dest_base="${DEST_DIR}/$(basename --suffix=.iso "${source}")"
 
-    if [ -f "${dest_base}-vmlinuz" ] && [ -f "${dest_base}-initrd.img" ]&& [ -f "${dest_base}-rootfs.img" ] && [ -f "${dest_base}.pxe.sha256" ] && [ "$(cat "${dest_base}.pxe.sha256")" = "$(cat "${source}.sha256")" ]; then
-        echo "${dest_base}-[vmlinuz|initrd.img|rootfs.img] are already up to date" >&2
+    if [ -f "${dest_base}.pxe.sha256" ] && \
+       [ "$(cat "${dest_base}.pxe.sha256")" = "$(cat "${source}.sha256")" ] && \
+       [ -f "${dest_base}-initrd.img" ] && \
+       ( [[ "${INITRD_ONLY:-false}" =~ [Tt]rue ]] || \
+         [ -f "${dest_base}-vmlinuz" -a -f "${dest_base}-rootfs.img" ] ); then
+        if [ "$2" = "--initrd-only" ]; then
+            echo "${dest_base}-initrd.img is already up to date" >&2
+        else
+            echo "${dest_base}-[vmlinuz|initrd.img|rootfs.img] are already up to date" >&2
+        fi
     else
         rm -f "${dest_base}.pxe.sha256"
+        rm -f "${dest_base}-vmlinuz" "${dest_base}-initrd.img" "${dest_base}-rootfs.img"
         coreos-installer iso extract pxe -o "${DEST_DIR}" "${source}"
         cp "${source}.sha256" "${dest_base}.pxe.sha256"
     fi

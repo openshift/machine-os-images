@@ -1,0 +1,44 @@
+#!/bin/bash
+
+set -e
+
+script_dir="$(dirname "$0")"
+arch="$(uname -p)"
+
+custom=false
+fixed=false
+case "$1" in
+    --image-build)
+        shift
+        custom=true
+        ;;
+    --pxe)
+        shift
+        fixed=true
+        ;;
+    --all)
+        shift
+        ;&
+    *)
+        custom=true
+        fixed=true
+        ;;
+esac
+
+DEST_DIR="$1"
+
+if [ $fixed = true ]; then
+    "${script_dir}/copy-pxe" "${DEST_DIR}"
+    ln -f -s "coreos-${arch}-vmlinuz" "${DEST_DIR}/ironic-python-agent.kernel"
+    ln -f -s "coreos-${arch}-rootfs.img" "${DEST_DIR}/ironic-python-agent.rootfs"
+else
+    "${script_dir}/copy-pxe" --initrd-only "${DEST_DIR}"
+    rm -f "${DEST_DIR}"/coreos-*-vmlinuz "${DEST_DIR}"/coreos-*-rootfs.img
+fi
+
+if [ $custom = true ]; then
+    ln -f -s "coreos-${arch}-initrd.img" "${DEST_DIR}/ironic-python-agent.initramfs"
+
+    "${script_dir}/copy-iso" "${DEST_DIR}"
+    ln -f -s "coreos-${arch}.iso" "${DEST_DIR}/ironic-python-agent.iso"
+fi
