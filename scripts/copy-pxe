@@ -29,6 +29,7 @@ extract_if_needed() {
     else
         rm -f "${dest_base}.pxe.sha256"
         rm -f "${dest_base}-vmlinuz" "${dest_base}-initrd.img" "${dest_base}-rootfs.img"
+        echo "extracting PXE files..." >&2
         coreos-installer iso extract pxe -o "${DEST_DIR}" "${source}"
         cp "${source}.sha256" "${dest_base}.pxe.sha256"
     fi
