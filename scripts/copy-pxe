@@ -11,14 +11,12 @@ extract_if_needed() {
     local dest_base
     dest_base="${DEST_DIR}/$(basename --suffix=.iso "${source}")"
 
-    # TODO: arguably we should record the checksums of all these files at
-    # build time, so that we can verify the actual files and not just use the
-    # checksum file as a signal.
-    if [ -f "${dest_base}-vmlinuz" ] && [ -f "${dest_base}-initrd.img" ]&& [ -f "${dest_base}-rootfs.img" ] && [ -f "${dest_base}.iso.sha256" ] && [ "$(cat "${dest_base}.iso.sha256")" = "$(cat "${source}.sha256")" ]; then
+    if [ -f "${dest_base}-vmlinuz" ] && [ -f "${dest_base}-initrd.img" ]&& [ -f "${dest_base}-rootfs.img" ] && [ -f "${dest_base}.pxe.sha256" ] && [ "$(cat "${dest_base}.pxe.sha256")" = "$(cat "${source}.sha256")" ]; then
         echo "${dest_base}-[vmlinuz|initrd.img|rootfs.img] are already up to date" >&2
     else
+        rm -f "${dest_base}.pxe.sha256"
         coreos-installer iso extract pxe -o "${DEST_DIR}" "${source}"
-        cp "${source}.sha256" "${DEST_DIR}"
+        cp "${source}.sha256" "${dest_base}.pxe.sha256"
     fi
 }
 
