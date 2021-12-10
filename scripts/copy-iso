@@ -19,7 +19,12 @@ copy_if_needed() {
         echo "${dest_file} is already up to date" >&2
     else
         rm -f "${dest_file}.sha256"
-        cp "${source}" "${DEST_DIR}"
+        if [ -n "${IP_OPTIONS:-}" ]; then
+            echo "Adding kernel argument ${IP_OPTIONS}" >&2
+            coreos-installer iso kargs modify -a "${IP_OPTIONS}" -o "${dest_file}" "${source}"
+        else
+            cp "${source}" "${DEST_DIR}"
+        fi
         cp "${source}.sha256" "${DEST_DIR}"
     fi
 }

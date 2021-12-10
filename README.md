@@ -16,3 +16,7 @@ PXE files respectively to a volume that is bound into the container. Pass the
 destination path as an argument. For example:
 
     podman run --rm -v .:/data:bind /bin/copy-iso /data
+
+For the `copy-iso` script, if the `IP_OPTIONS` environment variable is
+non-empty then the output ISO will be configured to add the provided option to
+the kernel command line.
