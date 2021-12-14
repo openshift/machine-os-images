@@ -15,3 +15,6 @@ COPY --from=builder /usr/bin/coreos-installer /usr/bin/
 COPY --from=builder /output/coreos/* /coreos/
 
 COPY scripts/* /bin/
+
+# Include this container in the release image payload
+LABEL io.openshift.release.operator=true
