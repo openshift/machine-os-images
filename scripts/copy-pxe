@@ -31,6 +31,11 @@ extract_if_needed() {
         rm -f "${dest_base}-vmlinuz" "${dest_base}-initrd.img" "${dest_base}-rootfs.img"
         echo "extracting PXE files..." >&2
         coreos-installer iso extract pxe -o "${DEST_DIR}" "${source}"
+        # We need to unzip aarch64 vmlinux because of this: https://github.com/coreos/fedora-coreos-tracker/issues/1019
+        if [[ "${dest_base}" =~ -aarch64$ ]]; then
+            mv ${dest_base}-vmlinuz ${dest_base}-vmlinuz.gz
+            gunzip ${dest_base}-vmlinuz.gz
+        fi
         cp "${source}.sha256" "${dest_base}.pxe.sha256"
     fi
 }
