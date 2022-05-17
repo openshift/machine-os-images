@@ -5,7 +5,6 @@ set -e
 ISO_ARCH="${ISO_ARCH:-$(uname -p)}"
 OUTPUT_DIR="coreos"
 IMAGE_DATA_FILE="coreos-stream.json"
-SOURCES_FILE="/usr/share/coreos-sources"
 
 if [ ! -d "${OUTPUT_DIR}" ]; then
     mkdir -p "${OUTPUT_DIR}"
@@ -24,12 +23,14 @@ image_data() {
 download_url() {
     local arch="$1"
     local url="$2"
+    shift 2
+    local args="$@"
 
     local iso_file="coreos-${arch}.iso"
     local iso_sha256
     iso_sha256="$(image_data "${arch}" sha256)"
 
-    wget "${url}" -O "${iso_file}"
+    wget ${args} "${url}" -O "${iso_file}"
     local actual_sha256
     actual_sha256="$(sha256sum "${iso_file}" | cut -d' ' -f1)"
     if [ "${actual_sha256}" != "${iso_sha256}" ]; then
@@ -40,30 +41,13 @@ download_url() {
     printf "%s" "${iso_sha256}" >"${iso_file}.sha256"
 }
 
-
-get_sha512() {
-    local iso_file="$1"
-
-    awk "/^SHA512 / { if (\$2 == \"(${iso_file})\") print \$4 }" "${SOURCES_FILE}" | tail -n 1
-}
-
-download_lookaside_arch() {
+download_art_arch() {
     local arch="$1"
 
-    local iso_file
-    local iso_sha512
-    iso_file="$(basename "$(image_data "${arch}" location)")"
-    iso_sha512="$(get_sha512 "${iso_file}")"
+    local origurl="$(image_data "${arch}" location)"
+    local url="https://releases-rhcos-art.cloud.privileged.psi.redhat.com/${origurl#*.com/art/}"
 
-    if [ -z "${iso_sha512}" ]; then
-        echo "No SHA512 sum found for ${iso_file}" >&2
-        exit 1
-    fi
-
-    local lookaside="http://pkgs.devel.redhat.com/repo"
-    local url="${lookaside}/containers/ose-installer/${iso_file}/sha512/${iso_sha512}/${iso_file}"
-
-    download_url "${arch}" "${url}"
+    download_url "${arch}" "${url}" --no-check-certificate  # skipping certificate check is ok because we will check its sha256 in any case.
 }
 
 download_direct_arch() {
@@ -81,8 +65,9 @@ download_arch() {
     if [[ "${DIRECT_DOWNLOAD:-false}" =~ [Tt]rue ]]; then
         download_direct_arch "${arch}"
     else
-        download_lookaside_arch "${arch}"
+        download_art_arch "${arch}"
     fi
 }
 
 download_arch "${ISO_ARCH}"
+
