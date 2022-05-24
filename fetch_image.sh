@@ -24,13 +24,12 @@ download_url() {
     local arch="$1"
     local url="$2"
     shift 2
-    local args="$@"
 
     local iso_file="coreos-${arch}.iso"
     local iso_sha256
     iso_sha256="$(image_data "${arch}" sha256)"
 
-    wget ${args} "${url}" -O "${iso_file}"
+    wget "$@" "${url}" -O "${iso_file}"
     local actual_sha256
     actual_sha256="$(sha256sum "${iso_file}" | cut -d' ' -f1)"
     if [ "${actual_sha256}" != "${iso_sha256}" ]; then
@@ -44,7 +43,8 @@ download_url() {
 download_art_arch() {
     local arch="$1"
 
-    local origurl="$(image_data "${arch}" location)"
+    local origurl
+    origurl="$(image_data "${arch}" location)"
     local url="https://releases-rhcos-art.cloud.privileged.psi.redhat.com/${origurl#*.com/art/}"
 
     download_url "${arch}" "${url}" --no-check-certificate  # skipping certificate check is ok because we will check its sha256 in any case.
