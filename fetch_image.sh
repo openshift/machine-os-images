@@ -45,7 +45,7 @@ download_art_arch() {
 
     local origurl
     origurl="$(image_data "${arch}" location)"
-    local url="https://releases-rhcos-art.cloud.privileged.psi.redhat.com/${origurl#*.com/art/}"
+    local url="https://releases-rhcos-art.apps.ocp-virt.prod.psi.redhat.com/${origurl#*.com/art/}"
 
     download_url "${arch}" "${url}" --no-check-certificate  # skipping certificate check is ok because we will check its sha256 in any case.
 }
