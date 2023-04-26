@@ -21,7 +21,7 @@ extract_if_needed() {
        [ -f "${dest_base}-initrd.img" ] && \
        ( [[ "${INITRD_ONLY:-false}" =~ [Tt]rue ]] || \
          [ -f "${dest_base}-vmlinuz" -a -f "${dest_base}-rootfs.img" ] ); then
-        if [ "$2" = "--initrd-only" ]; then
+        if [[ "${INITRD_ONLY:-false}" =~ [Tt]rue ]]; then
             echo "${dest_base}-initrd.img is already up to date" >&2
         else
             echo "${dest_base}-[vmlinuz|initrd.img|rootfs.img] are already up to date" >&2
