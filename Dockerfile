@@ -1,4 +1,4 @@
-FROM registry.ci.openshift.org/ocp/4.14:installer AS builder
+FROM registry.ci.openshift.org/ocp/4.15:installer AS builder
 
 ARG DIRECT_DOWNLOAD=false
 
@@ -9,7 +9,7 @@ COPY fetch_image.sh /usr/local/bin/
 RUN /usr/local/bin/fetch_image.sh
 
 
-FROM registry.ci.openshift.org/ocp/4.14:base
+FROM registry.ci.openshift.org/ocp/4.15:base
 
 COPY --from=builder /usr/bin/coreos-installer /usr/bin/
 COPY --from=builder /output/coreos/* /coreos/
