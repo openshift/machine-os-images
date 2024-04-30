@@ -9,7 +9,7 @@ COPY fetch_image.sh /usr/local/bin/
 RUN /usr/local/bin/fetch_image.sh
 
 
-FROM registry.ci.openshift.org/ocp/4.16:base
+FROM registry.ci.openshift.org/ocp/4.16:base-rhel9
 
 COPY --from=builder /usr/bin/coreos-installer /usr/bin/
 COPY --from=builder /output/coreos/* /coreos/
