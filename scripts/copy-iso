@@ -20,10 +20,21 @@ copy_if_needed() {
     else
         rm -f "${dest_file}.sha256"
         echo "Extracting ISO file" >&2
+        KERNEL_ARGS=""
         if [ -n "${IP_OPTIONS:-}" ]; then
             echo "Adding kernel argument ${IP_OPTIONS}" >&2
+            KERNEL_ARGS+="${IP_OPTIONS} "
+        fi
+        if [ -f /proc/sys/crypto/fips_enabled ]; then
+            if [ "$(cat /proc/sys/crypto/fips_enabled)" = "1"]; then
+                echo "Adding kernel argument fips=1" >&2
+                KERNEL_ARGS+="fips=1 "
+            fi
+        fi
+        if [ ! -z $KERNEL_ARGS ]; then
             rm -f "${dest_file}"
-            coreos-installer iso kargs modify -a "${IP_OPTIONS}" -o "${dest_file}" "${source}"
+            echo "Adding kernel arguments ${KERNEL_ARGS}" >&2
+            coreos-installer iso kargs modify -a "${KERNEL_ARGS}" -o "${dest_file}" "${source}"
         else
             cp "${source}" "${DEST_DIR}"
             echo "${dest_file}"
