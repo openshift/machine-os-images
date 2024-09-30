@@ -26,7 +26,7 @@ copy_if_needed() {
             KERNEL_ARGS+="${IP_OPTIONS} "
         fi
         if [ -f /proc/sys/crypto/fips_enabled ]; then
-            if [ "$(cat /proc/sys/crypto/fips_enabled)" = "1"]; then
+            if [ "$(cat /proc/sys/crypto/fips_enabled)" = "1" ]; then
                 echo "Adding kernel argument fips=1" >&2
                 KERNEL_ARGS+="fips=1 "
             fi
