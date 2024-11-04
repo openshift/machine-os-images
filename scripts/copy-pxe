@@ -19,8 +19,9 @@ extract_if_needed() {
     if [ -f "${dest_base}.pxe.sha256" ] && \
        [ "$(cat "${dest_base}.pxe.sha256")" = "$(cat "${source}.sha256")" ] && \
        [ -f "${dest_base}-initrd.img" ] && \
-       ( [[ "${INITRD_ONLY:-false}" =~ [Tt]rue ]] || \
-         [ -f "${dest_base}-vmlinuz" -a -f "${dest_base}-rootfs.img" ] ); then
+       { [[ "${INITRD_ONLY:-false}" =~ [Tt]rue ]] || \
+         { [ -f "${dest_base}-vmlinuz" ] && \
+           [ -f "${dest_base}-rootfs.img" ]; }; }; then
         if [[ "${INITRD_ONLY:-false}" =~ [Tt]rue ]]; then
             echo "${dest_base}-initrd.img is already up to date" >&2
         else
@@ -33,8 +34,8 @@ extract_if_needed() {
         coreos-installer iso extract pxe -o "${DEST_DIR}" "${source}"
         # We need to unzip aarch64 vmlinux because of this: https://github.com/coreos/fedora-coreos-tracker/issues/1019
         if [[ "${dest_base}" =~ -aarch64$ ]]; then
-            mv ${dest_base}-vmlinuz ${dest_base}-vmlinuz.gz
-            gunzip ${dest_base}-vmlinuz.gz
+            mv "${dest_base}-vmlinuz" "${dest_base}-vmlinuz.gz"
+            gunzip "${dest_base}-vmlinuz.gz"
         fi
         cp "${source}.sha256" "${dest_base}.pxe.sha256"
     fi
