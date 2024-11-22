@@ -1,6 +1,7 @@
 FROM registry.ci.openshift.org/ocp/4.18:installer AS builder
 
 ARG DIRECT_DOWNLOAD=false
+ENV ISO_HOST=https://releases-rhcos-art.apps.ocp-virt.prod.psi.redhat.com
 
 USER root:root
 
