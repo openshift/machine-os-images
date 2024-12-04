@@ -31,7 +31,7 @@ copy_if_needed() {
                 KERNEL_ARGS+="fips=1 "
             fi
         fi
-        if [ ! -z "$KERNEL_ARGS" ]; then
+        if [ -n "${KERNEL_ARGS}" ]; then
             rm -f "${dest_file}"
             echo "Adding kernel arguments ${KERNEL_ARGS}" >&2
             coreos-installer iso kargs modify -a "${KERNEL_ARGS}" -o "${dest_file}" "${source}"
