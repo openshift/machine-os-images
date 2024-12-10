@@ -1,11 +1,11 @@
 approvers:
-  - asalkeld
   - cgwalters
   - dtantsur
   - elfosardo
-  - hardys
+  - honza
+  - hroyrh
+  - iurygregory
   - jlebon
-  - sadasu
   - zaneb
 component: Bare Metal Hardware Provisioning
 subcomponent: OS Image Provider
