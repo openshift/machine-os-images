@@ -70,4 +70,3 @@ download_arch() {
 }
 
 download_arch "${ISO_ARCH}"
-
