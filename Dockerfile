@@ -2,6 +2,9 @@ FROM registry.ci.openshift.org/ocp/4.20:installer AS builder
 
 ARG DIRECT_DOWNLOAD=false
 ENV ISO_HOST=https://releases-rhcos--prod-pipeline.apps.int.prod-stable-spoke1-dc-iad2.itup.redhat.com
+# NOTE(elfosardo): dummy env variable to update when we need to rebuild the image without
+# actual changes; output of `date +%Y-%m-%d_%H-%M-%S`
+ENV DUMMY_REBUILD_TIMESTAMP=2026-05-12_10-10-18
 
 USER root:root
 
