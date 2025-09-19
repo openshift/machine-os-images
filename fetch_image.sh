@@ -70,7 +70,3 @@ download_arch() {
 }
 
 download_arch "${ISO_ARCH}"
-
-if [[ "${ISO_ARCH}" == "x86_64" ]]; then
-    download_arch "aarch64"
-fi
