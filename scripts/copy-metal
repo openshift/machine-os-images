@@ -27,6 +27,24 @@ esac
 
 DEST_DIR="$1"
 
+# ISOs need to be available before running copy-pxe and copy-iso.
+if [[ "${arch}" == "x86_64" ]]; then
+    MACHINE_OS_IMAGES_IMAGE="${MACHINE_OS_IMAGES_IMAGE:-}"
+
+    if [ -n "${MACHINE_OS_IMAGES_IMAGE}" ]; then
+        base64 -d /run/secrets/pull-secret > /run/secrets/auth.json
+        oc image extract \
+            --certificate-authority=/etc/pki/ca-trust/source/anchors/openshift-config-user-ca-bundle.crt \
+            --registry-config=/run/secrets/auth.json \
+            --path=/coreos/coreos-aarch64.iso:/coreos/ \
+            --filter-by-os=linux/arm64 \
+            --confirm \
+            "${MACHINE_OS_IMAGES_IMAGE}" || echo "failed to extract aarch64 ISO"
+    else
+        echo "MACHINE_OS_IMAGES_IMAGE is unset.  Skipping aarch64 iso extraction."
+    fi
+fi
+
 if [ $fixed = true ]; then
     "${script_dir}/copy-pxe" "${DEST_DIR}"
     ln -f -s "coreos-${arch}-vmlinuz" "${DEST_DIR}/ironic-python-agent.kernel"
