@@ -1,4 +1,4 @@
-FROM registry.ci.openshift.org/ocp/4.20:installer AS builder
+FROM registry.ci.openshift.org/ocp/4.21:installer AS builder
 
 ARG DIRECT_DOWNLOAD=false
 ENV ISO_HOST=https://releases-rhcos--prod-pipeline.apps.int.prod-stable-spoke1-dc-iad2.itup.redhat.com
@@ -10,7 +10,7 @@ COPY fetch_image.sh /usr/local/bin/
 RUN /usr/local/bin/fetch_image.sh
 
 
-FROM registry.ci.openshift.org/ocp/4.20:base-rhel9
+FROM registry.ci.openshift.org/ocp/4.21:base-rhel9
 
 COPY --from=builder /usr/bin/coreos-installer /usr/bin/
 COPY --from=builder /output/coreos/* /coreos/
