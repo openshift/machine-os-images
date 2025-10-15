@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -ex
 
 ISO_ARCH="${ISO_ARCH:-$(uname -p)}"
 OUTPUT_DIR="coreos"
