@@ -15,6 +15,8 @@ RUN /usr/local/bin/fetch_image.sh
 FROM registry.ci.openshift.org/ocp/4.21:cli AS cli
 FROM registry.ci.openshift.org/ocp/4.21:base-rhel9
 
+RUN dnf install -y jq && dnf clean all && rm -rf /var/cache/*
+
 COPY --from=builder /usr/bin/coreos-installer /usr/bin/
 COPY --from=builder /output/coreos/* /coreos/
 COPY --from=cli /usr/bin/oc /usr/bin/
