@@ -34,12 +34,13 @@ if [[ "${arch}" == "x86_64" ]]; then
     if [ -n "${MACHINE_OS_IMAGES_IMAGE}" ]; then
         base64 -d /run/secrets/pull-secret > /run/secrets/auth.json
         oc image extract \
-            --certificate-authority=/etc/pki/ca-trust/source/anchors/openshift-config-user-ca-bundle.crt \
+            --certificate-authority=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem \
             --registry-config=/run/secrets/auth.json \
             --path=/coreos/coreos-aarch64.iso:/coreos/ \
             --filter-by-os=linux/arm64 \
             --confirm \
             "${MACHINE_OS_IMAGES_IMAGE}" || echo "failed to extract aarch64 ISO"
+        jq -r ".architectures.aarch64.artifacts.metal.formats.iso.disk.sha256" /coreos/coreos-stream.json > coreos-aarch64.iso.sha256
     else
         echo "MACHINE_OS_IMAGES_IMAGE is unset.  Skipping aarch64 iso extraction."
     fi
