@@ -40,7 +40,7 @@ if [[ "${arch}" == "x86_64" ]]; then
             --filter-by-os=linux/arm64 \
             --confirm \
             "${MACHINE_OS_IMAGES_IMAGE}" || echo "failed to extract aarch64 ISO"
-        jq -r ".architectures.aarch64.artifacts.metal.formats.iso.disk.sha256" /coreos/coreos-stream.json > coreos-aarch64.iso.sha256
+        jq -r ".architectures.aarch64.artifacts.metal.formats.iso.disk.sha256" /coreos/coreos-stream.json > /coreos/coreos-aarch64.iso.sha256
     else
         echo "MACHINE_OS_IMAGES_IMAGE is unset.  Skipping aarch64 iso extraction."
     fi
