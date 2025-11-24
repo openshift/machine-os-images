@@ -8,6 +8,7 @@ if [ "$1" = "--initrd-only" ]; then
 fi
 
 ISO_DIR="/coreos"
+ISO_DIR_WRITABLE="${1}/coreos"
 DEST_DIR="$1"
 
 extract_if_needed() {
@@ -15,6 +16,13 @@ extract_if_needed() {
 
     local dest_base
     dest_base="${DEST_DIR}/$(basename --suffix=.iso "${source}")"
+
+    # Add this check for empty ISO_DIR_WRITABLE, in which case the path
+    # doesn't expand and translates to /shared/html/images/*.iso
+    if [ ! -f "${source}" ]; then
+        echo "${source} file does not exist" >&2
+        return
+    fi
 
     if [ -f "${dest_base}.pxe.sha256" ] && \
        [ "$(cat "${dest_base}.pxe.sha256")" = "$(cat "${source}.sha256")" ] && \
@@ -43,6 +51,6 @@ extract_if_needed() {
     fi
 }
 
-for iso in "${ISO_DIR}"/*.iso; do
+for iso in "${ISO_DIR}"/*.iso "${ISO_DIR_WRITABLE}"/*.iso; do
     extract_if_needed "${iso}"
 done

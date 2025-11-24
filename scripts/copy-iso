@@ -3,6 +3,7 @@
 set -e
 
 ISO_DIR="/coreos"
+ISO_DIR_WRITABLE="${1}/coreos"
 DEST_DIR="$1"
 
 if [ ! -d "${DEST_DIR}" ]; then
@@ -14,6 +15,13 @@ copy_if_needed() {
     local dest_file
 
     dest_file="${DEST_DIR}/$(basename "${source}")"
+
+    # Add this check for empty ISO_DIR_WRITABLE, in which case the path
+    # doesn't expand and translates to /shared/html/images/*.iso
+    if [ ! -f "${source}" ]; then
+        echo "${source} file does not exist" >&2
+        return
+    fi
 
     if [ -f "${dest_file}" ] && [ "$(cat "${dest_file}.sha256")" = "$(cat "${source}.sha256")" ]; then
         echo "${dest_file} is already up to date" >&2
@@ -43,6 +51,6 @@ copy_if_needed() {
     fi
 }
 
-for iso in "${ISO_DIR}"/*.iso; do
+for iso in "${ISO_DIR}"/*.iso "${ISO_DIR_WRITABLE}"/*.iso; do
     copy_if_needed "${iso}"
 done
