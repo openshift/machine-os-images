@@ -13,7 +13,7 @@ COPY fetch_image.sh /usr/local/bin/
 RUN /usr/local/bin/fetch_image.sh
 
 FROM registry.ci.openshift.org/ocp/4.21:cli AS cli
-FROM registry.ci.openshift.org/ocp/4.21:base-rhel9
+FROM registry.ci.openshift.org/ocp/4.21:base-rhel9-minimal-test
 
 RUN dnf install -y jq && dnf clean all && rm -rf /var/cache/*
 
