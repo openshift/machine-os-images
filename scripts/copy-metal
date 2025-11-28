@@ -26,6 +26,14 @@ case "$1" in
 esac
 
 DEST_DIR="$1"
+# Extract coreos ISOs in same path as DEST_DIR (which has a writable mount),
+# so that we don't get an exception when ReadOnlyRootFilesystem flag is set
+# to true for this container in the CBO
+ISO_DIR_WRITABLE="${1}/coreos"
+
+if [ ! -d "${ISO_DIR_WRITABLE}" ]; then
+    mkdir -p "${ISO_DIR_WRITABLE}"
+fi
 
 # ISOs need to be available before running copy-pxe and copy-iso.
 if [[ "${arch}" == "x86_64" ]]; then
@@ -36,11 +44,11 @@ if [[ "${arch}" == "x86_64" ]]; then
         oc image extract \
             --certificate-authority=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem \
             --registry-config=/run/secrets/auth.json \
-            --path=/coreos/coreos-aarch64.iso:/coreos/ \
+            --path=/coreos/coreos-aarch64.iso:"${ISO_DIR_WRITABLE}/" \
             --filter-by-os=linux/arm64 \
             --confirm \
             "${MACHINE_OS_IMAGES_IMAGE}" || echo "failed to extract aarch64 ISO"
-        jq -r ".architectures.aarch64.artifacts.metal.formats.iso.disk.sha256" /coreos/coreos-stream.json > /coreos/coreos-aarch64.iso.sha256
+        jq -r ".architectures.aarch64.artifacts.metal.formats.iso.disk.sha256" /coreos/coreos-stream.json > "${ISO_DIR_WRITABLE}/coreos-aarch64.iso.sha256"
     else
         echo "MACHINE_OS_IMAGES_IMAGE is unset.  Skipping aarch64 iso extraction."
     fi
