@@ -1,4 +1,4 @@
-FROM registry.ci.openshift.org/ocp/4.21:installer AS builder
+FROM registry.ci.openshift.org/ocp/4.22:installer AS builder
 
 ARG DIRECT_DOWNLOAD=false
 ENV ISO_HOST=https://releases-rhcos--prod-pipeline.apps.int.prod-stable-spoke1-dc-iad2.itup.redhat.com
@@ -12,8 +12,8 @@ RUN dnf install -y jq wget coreos-installer
 COPY fetch_image.sh /usr/local/bin/
 RUN /usr/local/bin/fetch_image.sh
 
-FROM registry.ci.openshift.org/ocp/4.21:cli AS cli
-FROM registry.ci.openshift.org/ocp/4.21:base-rhel9
+FROM registry.ci.openshift.org/ocp/4.22:cli AS cli
+FROM registry.ci.openshift.org/ocp/4.22:base-rhel9
 
 RUN dnf install -y jq && dnf clean all && rm -rf /var/cache/*
 
