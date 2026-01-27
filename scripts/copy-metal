@@ -58,11 +58,14 @@ if [ $fixed = true ]; then
     "${script_dir}/copy-pxe" "${DEST_DIR}"
     ln -f -s "coreos-${arch}-vmlinuz" "${DEST_DIR}/ironic-python-agent.kernel"
     ln -f -s "coreos-${arch}-vmlinuz" "${DEST_DIR}/ironic-python-agent_${arch}.kernel"
+    ln -f -s "coreos-${arch}-initrd.img" "${DEST_DIR}/ironic-python-agent.initramfs"
+    ln -f -s "coreos-${arch}-initrd.img" "${DEST_DIR}/ironic-python-agent_${arch}.initramfs"
     ln -f -s "coreos-${arch}-rootfs.img" "${DEST_DIR}/ironic-python-agent.rootfs"
     ln -f -s "coreos-${arch}-rootfs.img" "${DEST_DIR}/ironic-python-agent_${arch}.rootfs"
 
     if [[ "${arch}" == "x86_64" ]]; then
         ln -f -s "coreos-aarch64-vmlinuz" "${DEST_DIR}/ironic-python-agent_aarch64.kernel"
+        ln -f -s "coreos-aarch64-initrd.img" "${DEST_DIR}/ironic-python-agent_aarch64.initramfs"
         ln -f -s "coreos-aarch64-rootfs.img" "${DEST_DIR}/ironic-python-agent_aarch64.rootfs"
     fi
 
