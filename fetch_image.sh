@@ -2,7 +2,7 @@
 
 set -ex
 
-ISO_ARCH="${ISO_ARCH:-$(uname -p)}"
+ISO_ARCH="${ISO_ARCH:-$(uname -m)}"
 OUTPUT_DIR="coreos"
 IMAGE_DATA_FILE="coreos-stream.json"
 
