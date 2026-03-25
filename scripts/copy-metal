@@ -5,6 +5,26 @@ set -e
 script_dir="$(dirname "$0")"
 arch="$(uname -p)"
 
+# COREOS_VERSION selects which version the ironic-python-agent symlinks point to.
+# Default: empty (version 9) for backward compatibility.
+COREOS_VERSION="${COREOS_VERSION:-}"
+
+case "${COREOS_VERSION}" in
+    ""|9) version_prefix="" ;;
+    10) version_prefix="10" ;;
+    *)
+        echo "Unknown COREOS_VERSION: ${COREOS_VERSION}" >&2
+        exit 1
+        ;;
+esac
+
+coreos_name="coreos${version_prefix}"
+
+if [ ! -f "/coreos/${coreos_name}-stream.json" ]; then
+    echo "CoreOS version ${COREOS_VERSION:-9} is not bundled in this image (missing /coreos/${coreos_name}-stream.json)" >&2
+    exit 1
+fi
+
 custom=false
 fixed=false
 case "$1" in
@@ -36,19 +56,30 @@ if [ ! -d "${ISO_DIR_WRITABLE}" ]; then
 fi
 
 # ISOs need to be available before running copy-pxe and copy-iso.
+# Extract cross-arch aarch64 ISOs for all available CoreOS versions.
 if [[ "${arch}" == "x86_64" ]]; then
     MACHINE_OS_IMAGES_IMAGE="${MACHINE_OS_IMAGES_IMAGE:-}"
 
     if [ -n "${MACHINE_OS_IMAGES_IMAGE}" ]; then
         base64 -d /run/secrets/pull-secret > /run/secrets/auth.json
-        oc image extract \
-            --certificate-authority=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem \
-            --registry-config=/run/secrets/auth.json \
-            --path=/coreos/coreos-aarch64.iso:"${ISO_DIR_WRITABLE}/" \
-            --filter-by-os=linux/arm64 \
-            --confirm \
-            "${MACHINE_OS_IMAGES_IMAGE}" || echo "failed to extract aarch64 ISO"
-        jq -r ".architectures.aarch64.artifacts.metal.formats.iso.disk.sha256" /coreos/coreos-stream.json > "${ISO_DIR_WRITABLE}/coreos-aarch64.iso.sha256"
+        for prefix in coreos coreos10; do
+            stream_json="/coreos/${prefix}-stream.json"
+            if [ ! -f "${stream_json}" ]; then
+                continue
+            fi
+            iso_file="${prefix}-aarch64.iso"
+            if oc image extract \
+                --certificate-authority=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem \
+                --registry-config=/run/secrets/auth.json \
+                --path="/coreos/${iso_file}:${ISO_DIR_WRITABLE}/" \
+                --filter-by-os=linux/arm64 \
+                --confirm \
+                "${MACHINE_OS_IMAGES_IMAGE}"; then
+                jq -r ".architectures.aarch64.artifacts.metal.formats.iso.disk.sha256" "${stream_json}" > "${ISO_DIR_WRITABLE}/${iso_file}.sha256"
+            else
+                echo "failed to extract aarch64 ISO for ${prefix}" >&2
+            fi
+        done
     else
         echo "MACHINE_OS_IMAGES_IMAGE is unset.  Skipping aarch64 iso extraction."
     fi
@@ -56,35 +87,34 @@ fi
 
 if [ $fixed = true ]; then
     "${script_dir}/copy-pxe" "${DEST_DIR}"
-    ln -f -s "coreos-${arch}-vmlinuz" "${DEST_DIR}/ironic-python-agent.kernel"
-    ln -f -s "coreos-${arch}-vmlinuz" "${DEST_DIR}/ironic-python-agent_${arch}.kernel"
-    ln -f -s "coreos-${arch}-initrd.img" "${DEST_DIR}/ironic-python-agent.initramfs"
-    ln -f -s "coreos-${arch}-initrd.img" "${DEST_DIR}/ironic-python-agent_${arch}.initramfs"
-    ln -f -s "coreos-${arch}-rootfs.img" "${DEST_DIR}/ironic-python-agent.rootfs"
-    ln -f -s "coreos-${arch}-rootfs.img" "${DEST_DIR}/ironic-python-agent_${arch}.rootfs"
+    ln -f -s "${coreos_name}-${arch}-vmlinuz" "${DEST_DIR}/ironic-python-agent.kernel"
+    ln -f -s "${coreos_name}-${arch}-vmlinuz" "${DEST_DIR}/ironic-python-agent_${arch}.kernel"
+    ln -f -s "${coreos_name}-${arch}-initrd.img" "${DEST_DIR}/ironic-python-agent.initramfs"
+    ln -f -s "${coreos_name}-${arch}-initrd.img" "${DEST_DIR}/ironic-python-agent_${arch}.initramfs"
+    ln -f -s "${coreos_name}-${arch}-rootfs.img" "${DEST_DIR}/ironic-python-agent.rootfs"
+    ln -f -s "${coreos_name}-${arch}-rootfs.img" "${DEST_DIR}/ironic-python-agent_${arch}.rootfs"
 
     if [[ "${arch}" == "x86_64" ]]; then
-        ln -f -s "coreos-aarch64-vmlinuz" "${DEST_DIR}/ironic-python-agent_aarch64.kernel"
-        ln -f -s "coreos-aarch64-initrd.img" "${DEST_DIR}/ironic-python-agent_aarch64.initramfs"
-        ln -f -s "coreos-aarch64-rootfs.img" "${DEST_DIR}/ironic-python-agent_aarch64.rootfs"
+        ln -f -s "${coreos_name}-aarch64-vmlinuz" "${DEST_DIR}/ironic-python-agent_aarch64.kernel"
+        ln -f -s "${coreos_name}-aarch64-initrd.img" "${DEST_DIR}/ironic-python-agent_aarch64.initramfs"
+        ln -f -s "${coreos_name}-aarch64-rootfs.img" "${DEST_DIR}/ironic-python-agent_aarch64.rootfs"
     fi
 
 else
     "${script_dir}/copy-pxe" --initrd-only "${DEST_DIR}"
-    rm -f "${DEST_DIR}"/coreos-*-vmlinuz "${DEST_DIR}"/coreos-*-rootfs.img
+    rm -f "${DEST_DIR}"/coreos*-*-vmlinuz "${DEST_DIR}"/coreos*-*-rootfs.img
 fi
 
 if [ $custom = true ]; then
-    ln -f -s "coreos-${arch}-initrd.img" "${DEST_DIR}/ironic-python-agent.initramfs"
-    ln -f -s "coreos-${arch}-initrd.img" "${DEST_DIR}/ironic-python-agent_${arch}.initramfs"
+    ln -f -s "${coreos_name}-${arch}-initrd.img" "${DEST_DIR}/ironic-python-agent.initramfs"
+    ln -f -s "${coreos_name}-${arch}-initrd.img" "${DEST_DIR}/ironic-python-agent_${arch}.initramfs"
 
     "${script_dir}/copy-iso" "${DEST_DIR}"
-    ln -f -s "coreos-${arch}.iso" "${DEST_DIR}/ironic-python-agent.iso"
-    ln -f -s "coreos-${arch}.iso" "${DEST_DIR}/ironic-python-agent_${arch}.iso"
-
+    ln -f -s "${coreos_name}-${arch}.iso" "${DEST_DIR}/ironic-python-agent.iso"
+    ln -f -s "${coreos_name}-${arch}.iso" "${DEST_DIR}/ironic-python-agent_${arch}.iso"
 
     if [[ "${arch}" == "x86_64" ]]; then
-        ln -f -s "coreos-aarch64-initrd.img" "${DEST_DIR}/ironic-python-agent_aarch64.initramfs"
-        ln -f -s "coreos-aarch64.iso" "${DEST_DIR}/ironic-python-agent_aarch64.iso"
+        ln -f -s "${coreos_name}-aarch64-initrd.img" "${DEST_DIR}/ironic-python-agent_aarch64.initramfs"
+        ln -f -s "${coreos_name}-aarch64.iso" "${DEST_DIR}/ironic-python-agent_aarch64.iso"
     fi
 fi
