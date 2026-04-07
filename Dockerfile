@@ -1,7 +1,7 @@
 FROM registry.ci.openshift.org/ocp/4.22:installer AS builder
 
 ARG DIRECT_DOWNLOAD=false
-ARG COREOS_VERSIONS=9
+ARG COREOS_VERSIONS=9,10
 ENV ISO_HOST=https://releases-rhcos--prod-pipeline.apps.int.prod-stable-spoke1-dc-iad2.itup.redhat.com
 ENV COREOS_VERSIONS=${COREOS_VERSIONS}
 # NOTE(elfosardo): dummy env variable to update when we need to rebuild the image without
