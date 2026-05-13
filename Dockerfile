@@ -6,7 +6,7 @@ ENV ISO_HOST=https://releases-rhcos--prod-pipeline.apps.int.prod-stable-spoke1-d
 ENV COREOS_VERSIONS=${COREOS_VERSIONS}
 # NOTE(elfosardo): dummy env variable to update when we need to rebuild the image without
 # actual changes; output of `date +%Y-%m-%d_%H-%M-%S`
-ENV DUMMY_REBUILD_TIMESTAMP=2025-10-03_18-18-19
+ENV DUMMY_REBUILD_TIMESTAMP=2026-05-12_14-38-26
 
 USER root:root
 
