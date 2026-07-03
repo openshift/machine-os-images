@@ -9,9 +9,17 @@ CACHI2_GENERIC_DIR="/cachi2/output/deps/generic"
 
 stream_name_for_version() {
     local version="$1"
+    local prefix="rhel"
+
+    # Detect OKD builds - use centos streams instead of rhel
+    # ART injects TAGS='scos' for OKD builds
+    if [[ "${TAGS:-}" == *scos* ]]; then
+        prefix="centos"
+    fi
+
     case "${version}" in
-        9) echo "rhel-9" ;;
-        10) echo "rhel-10" ;;
+        9) echo "${prefix}-9" ;;
+        10) echo "${prefix}-10" ;;
         *)
             echo "Unknown CoreOS version: ${version}" >&2
             exit 1
@@ -138,7 +146,11 @@ for version in ${COREOS_VERSIONS}; do
     file_prefix="$(file_prefix_for_version "${version}")"
     stream_data_file="${file_prefix}-stream.json"
 
-    openshift-install coreos print-stream-json --stream "${stream_name}" >"${stream_data_file}"
+    # Try to get stream data; skip this version if openshift-install doesn't support it
+    if ! openshift-install coreos print-stream-json --stream "${stream_name}" >"${stream_data_file}" 2>/dev/null; then
+        echo "Skipping CoreOS ${version} (stream: ${stream_name}) - not supported by openshift-install" >&2
+        continue
+    fi
 
     echo "Downloading CoreOS ${version} (stream: ${stream_name}) for ${ISO_ARCH}"
     download_arch "${file_prefix}" "${stream_data_file}" "${ISO_ARCH}"
