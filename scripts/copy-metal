@@ -55,6 +55,19 @@ if [ ! -d "${ISO_DIR_WRITABLE}" ]; then
     mkdir -p "${ISO_DIR_WRITABLE}"
 fi
 
+# Build mirror registry args for oc image extract so that disconnected
+# clusters resolve images through local mirrors (IDMS) instead of
+# reaching out to the upstream registry directly.
+# Populates the mirror_args array; callers expand with "${mirror_args[@]}".
+build_mirror_args() {
+    mirror_args=()
+
+    local idms_file="${IDMS_FILE:-/etc/image-mirrors/idms.yaml}"
+    if [[ -f "${idms_file}" ]]; then
+        mirror_args=("--idms-file=${idms_file}")
+    fi
+}
+
 # ISOs need to be available before running copy-pxe and copy-iso.
 # Extract cross-arch aarch64 ISOs for all available CoreOS versions.
 if [[ "${arch}" == "x86_64" ]]; then
@@ -62,6 +75,7 @@ if [[ "${arch}" == "x86_64" ]]; then
 
     if [ -n "${MACHINE_OS_IMAGES_IMAGE}" ]; then
         base64 -d /run/secrets/pull-secret > /run/secrets/auth.json
+        build_mirror_args
         for prefix in coreos coreos10; do
             stream_json="/coreos/${prefix}-stream.json"
             if [ ! -f "${stream_json}" ]; then
@@ -74,6 +88,7 @@ if [[ "${arch}" == "x86_64" ]]; then
                 --path="/coreos/${iso_file}:${ISO_DIR_WRITABLE}/" \
                 --filter-by-os=linux/arm64 \
                 --confirm \
+                "${mirror_args[@]}" \
                 "${MACHINE_OS_IMAGES_IMAGE}"; then
                 jq -r ".architectures.aarch64.artifacts.metal.formats.iso.disk.sha256" "${stream_json}" > "${ISO_DIR_WRITABLE}/${iso_file}.sha256"
             else
