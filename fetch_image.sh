@@ -9,18 +9,21 @@ CACHI2_GENERIC_DIR="/cachi2/output/deps/generic"
 
 stream_name_for_version() {
     local version="$1"
-    local rhel_name="rhel-${version}"
-    local centos_name="centos-${version}"
+    local prefix="rhel"
 
-    # Try rhel first (OCP), fall back to centos (OKD/SCOS)
-    if openshift-install coreos print-stream-json --stream "${rhel_name}" >/dev/null 2>&1; then
-        echo "${rhel_name}"
-    elif openshift-install coreos print-stream-json --stream "${centos_name}" >/dev/null 2>&1; then
-        echo "${centos_name}"
-    else
-        echo "No supported CoreOS stream found for version ${version} (tried ${rhel_name}, ${centos_name})" >&2
-        exit 1
+    # OKD/SCOS builds use CentOS Stream CoreOS instead of RHEL CoreOS
+    if [[ "${TAGS:-}" == *scos* ]]; then
+        prefix="centos"
     fi
+
+    case "${version}" in
+        9) echo "${prefix}-9" ;;
+        10) echo "${prefix}-10" ;;
+        *)
+            echo "Unknown CoreOS version: ${version}" >&2
+            exit 1
+            ;;
+    esac
 }
 
 file_prefix_for_version() {
