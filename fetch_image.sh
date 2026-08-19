@@ -9,9 +9,16 @@ CACHI2_GENERIC_DIR="/cachi2/output/deps/generic"
 
 stream_name_for_version() {
     local version="$1"
+    local prefix="rhel"
+
+    # OKD/SCOS builds use CentOS Stream CoreOS instead of RHEL CoreOS
+    if [[ "${TAGS:-}" == *scos* ]]; then
+        prefix="centos"
+    fi
+
     case "${version}" in
-        9) echo "rhel-9" ;;
-        10) echo "rhel-10" ;;
+        9) echo "${prefix}-9" ;;
+        10) echo "${prefix}-10" ;;
         *)
             echo "Unknown CoreOS version: ${version}" >&2
             exit 1
