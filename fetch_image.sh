@@ -11,8 +11,9 @@ stream_name_for_version() {
     local version="$1"
     local prefix="rhel"
 
-    # OKD/SCOS builds use CentOS Stream CoreOS instead of RHEL CoreOS
-    if [[ "${TAGS:-}" == *scos* ]]; then
+    # OKD/SCOS builds run on CentOS and use CentOS Stream CoreOS
+    source /etc/os-release
+    if [[ "${ID}" == "centos" ]]; then
         prefix="centos"
     fi
 
