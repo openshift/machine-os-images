@@ -17,9 +17,11 @@ stream_name_for_version() {
         prefix="centos"
     fi
 
-    case "${version}" in
-        9) echo "${prefix}-9" ;;
-        10) echo "${prefix}-10" ;;
+    case "${prefix}-${version}" in
+        centos-9)
+            echo "Skipping CoreOS ${version}: ${prefix}-${version} is not supported" >&2
+            ;;
+        rhel-9|rhel-10|centos-10) echo "${prefix}-${version}" ;;
         *)
             echo "Unknown CoreOS version: ${version}" >&2
             exit 1
@@ -143,6 +145,9 @@ COREOS_VERSIONS="${COREOS_VERSIONS//,/ }"
 
 for version in ${COREOS_VERSIONS}; do
     stream_name="$(stream_name_for_version "${version}")"
+    if [[ -z "${stream_name}" ]]; then
+        continue
+    fi
     file_prefix="$(file_prefix_for_version "${version}")"
     stream_data_file="${file_prefix}-stream.json"
 
