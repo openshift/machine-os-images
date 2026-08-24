@@ -119,6 +119,7 @@ if [[ "${arch}" == "x86_64" ]]; then
                 expected_sha256="$(jq -r ".architectures.aarch64.artifacts.metal.formats.iso.disk.sha256" "${stream_json}")"
                 if ! verify_iso_checksum "${iso_path}" "${expected_sha256}"; then
                     echo "failed to validate aarch64 ISO for ${prefix}" >&2
+                    exit 1
                 fi
             else
                 echo "failed to extract aarch64 ISO for ${prefix}" >&2
