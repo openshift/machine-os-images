@@ -18,11 +18,10 @@ stream_name_for_version() {
         prefix="centos"
     fi
 
-    case "${version}" in
-        9) echo "${prefix}-9" ;;
-        10) echo "${prefix}-10" ;;
+    case "${prefix}-${version}" in
+        rhel-9|rhel-10|centos-10) echo "${prefix}-${version}" ;;
         *)
-            echo "Unknown CoreOS version: ${version}" >&2
+            echo "Unsupported CoreOS stream: ${prefix}-${version}" >&2
             exit 1
             ;;
     esac
