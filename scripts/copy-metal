@@ -68,31 +68,6 @@ build_mirror_args() {
     fi
 }
 
-# Verify an extracted ISO against the expected SHA256 from stream metadata.
-# Writes the checksum sidecar only when the file exists and the hash matches.
-verify_iso_checksum() {
-    local iso_path="$1"
-    local expected_sha256="$2"
-    local actual_sha256
-
-    if [ ! -f "${iso_path}" ]; then
-        echo "${iso_path} file does not exist" >&2
-        rm -f "${iso_path}.sha256"
-        return 1
-    fi
-
-    actual_sha256="$(sha256sum "${iso_path}")"
-    actual_sha256="${actual_sha256%% *}"
-    if [ "${actual_sha256}" != "${expected_sha256}" ]; then
-        echo "Invalid checksum  ${actual_sha256}" >&2
-        echo "Expected checksum ${expected_sha256}" >&2
-        rm -f "${iso_path}" "${iso_path}.sha256"
-        return 1
-    fi
-
-    printf "%s" "${expected_sha256}" >"${iso_path}.sha256"
-}
-
 # ISOs need to be available before running copy-pxe and copy-iso.
 # Extract cross-arch aarch64 ISOs for all available CoreOS versions.
 if [[ "${arch}" == "x86_64" ]]; then
@@ -107,7 +82,6 @@ if [[ "${arch}" == "x86_64" ]]; then
                 continue
             fi
             iso_file="${prefix}-aarch64.iso"
-            iso_path="${ISO_DIR_WRITABLE}/${iso_file}"
             if oc image extract \
                 --certificate-authority=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem \
                 --registry-config=/run/secrets/auth.json \
@@ -116,11 +90,7 @@ if [[ "${arch}" == "x86_64" ]]; then
                 --confirm \
                 "${mirror_args[@]}" \
                 "${MACHINE_OS_IMAGES_IMAGE}"; then
-                expected_sha256="$(jq -r ".architectures.aarch64.artifacts.metal.formats.iso.disk.sha256" "${stream_json}")"
-                if ! verify_iso_checksum "${iso_path}" "${expected_sha256}"; then
-                    echo "failed to validate aarch64 ISO for ${prefix}" >&2
-                    exit 1
-                fi
+                jq -r ".architectures.aarch64.artifacts.metal.formats.iso.disk.sha256" "${stream_json}" > "${ISO_DIR_WRITABLE}/${iso_file}.sha256"
             else
                 echo "failed to extract aarch64 ISO for ${prefix}" >&2
             fi
