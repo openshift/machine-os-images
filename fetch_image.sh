@@ -9,11 +9,19 @@ CACHI2_GENERIC_DIR="/cachi2/output/deps/generic"
 
 stream_name_for_version() {
     local version="$1"
-    case "${version}" in
-        9) echo "rhel-9" ;;
-        10) echo "rhel-10" ;;
+    local prefix="rhel"
+
+    # OKD/SCOS builds run on CentOS and use CentOS Stream CoreOS
+    # shellcheck source=/dev/null
+    source /etc/os-release
+    if [[ "${ID}" == "centos" ]]; then
+        prefix="centos"
+    fi
+
+    case "${prefix}-${version}" in
+        rhel-9|rhel-10|centos-10) echo "${prefix}-${version}" ;;
         *)
-            echo "Unknown CoreOS version: ${version}" >&2
+            echo "Unsupported CoreOS stream: ${prefix}-${version}" >&2
             exit 1
             ;;
     esac
