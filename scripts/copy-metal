@@ -91,20 +91,13 @@ verify_iso_checksum() {
 # oc image extract --filter-by-os=linux/arm64 returns 0 on a single-arch
 # image (the filter is ignored), so we inspect the manifest list instead.
 inspect_machine_os_images() {
-    local info_args=(
-        --certificate-authority=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
-        --registry-config=/run/secrets/auth.json
-        --show-multiarch
-        -o json
+    oc image info \
+        --certificate-authority=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem \
+        --registry-config=/run/secrets/auth.json \
+        --show-multiarch \
+        -o json \
+        "${mirror_args[@]}" \
         "${MACHINE_OS_IMAGES_IMAGE}"
-    )
-
-    # oc image info may not support --idms-file on all oc versions.
-    if [[ ${#mirror_args[@]} -gt 0 ]] && oc image info --help 2>&1 | grep -q -- '--idms-file'; then
-        oc image info "${mirror_args[@]}" "${info_args[@]}"
-    else
-        oc image info "${info_args[@]}"
-    fi
 }
 
 # Return 0 if the inspected image JSON includes a linux/arm64 variant.
