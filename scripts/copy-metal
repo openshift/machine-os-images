@@ -55,9 +55,8 @@ if [ ! -d "${ISO_DIR_WRITABLE}" ]; then
     mkdir -p "${ISO_DIR_WRITABLE}"
 fi
 
-# Build mirror registry args for oc image extract so that disconnected
-# clusters resolve images through local mirrors (IDMS) instead of
-# reaching out to the upstream registry directly.
+# Build mirror registry args for oc so that disconnected clusters resolve
+# images through local mirrors (IDMS) instead of the upstream registry.
 # Populates the mirror_args array; callers expand with "${mirror_args[@]}".
 build_mirror_args() {
     mirror_args=()
@@ -68,6 +67,25 @@ build_mirror_args() {
     fi
 }
 
+# Verify an extracted ISO against the expected SHA256 from stream metadata.
+# Writes the checksum sidecar only when the hash matches.
+verify_iso_checksum() {
+    local iso_path="$1"
+    local expected_sha256="$2"
+    local actual_sha256
+
+    actual_sha256="$(sha256sum "${iso_path}")"
+    actual_sha256="${actual_sha256%% *}"
+    if [ "${actual_sha256}" != "${expected_sha256}" ]; then
+        echo "Invalid checksum  ${actual_sha256}" >&2
+        echo "Expected checksum ${expected_sha256}" >&2
+        rm -f "${iso_path}" "${iso_path}.sha256"
+        return 1
+    fi
+
+    printf "%s" "${expected_sha256}" >"${iso_path}.sha256"
+}
+
 # ISOs need to be available before running copy-pxe and copy-iso.
 # Extract cross-arch aarch64 ISOs for all available CoreOS versions.
 if [[ "${arch}" == "x86_64" ]]; then
@@ -76,25 +94,49 @@ if [[ "${arch}" == "x86_64" ]]; then
     if [ -n "${MACHINE_OS_IMAGES_IMAGE}" ]; then
         base64 -d /run/secrets/pull-secret > /run/secrets/auth.json
         build_mirror_args
-        for prefix in coreos coreos10; do
-            stream_json="/coreos/${prefix}-stream.json"
-            if [ ! -f "${stream_json}" ]; then
-                continue
-            fi
-            iso_file="${prefix}-aarch64.iso"
-            if oc image extract \
-                --certificate-authority=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem \
-                --registry-config=/run/secrets/auth.json \
-                --path="/coreos/${iso_file}:${ISO_DIR_WRITABLE}/" \
-                --filter-by-os=linux/arm64 \
-                --confirm \
-                "${mirror_args[@]}" \
-                "${MACHINE_OS_IMAGES_IMAGE}"; then
-                jq -r ".architectures.aarch64.artifacts.metal.formats.iso.disk.sha256" "${stream_json}" > "${ISO_DIR_WRITABLE}/${iso_file}.sha256"
-            else
-                echo "failed to extract aarch64 ISO for ${prefix}" >&2
-            fi
-        done
+
+        # Only extract aarch64 ISO if we have multiarch payload
+        if ! image_info="$(oc image info \
+            --certificate-authority=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem \
+            --registry-config=/run/secrets/auth.json \
+            --show-multiarch \
+            -o json \
+            "${mirror_args[@]}" \
+            "${MACHINE_OS_IMAGES_IMAGE}")"; then
+            echo "failed to inspect ${MACHINE_OS_IMAGES_IMAGE}. Skipping aarch64 iso extraction." >&2
+        elif echo "${image_info}" | jq -e '(if type == "array" then .[] else . end) | select(.config.os == "linux" and .config.architecture == "arm64")' >/dev/null; then
+            for prefix in coreos coreos10; do
+                stream_json="/coreos/${prefix}-stream.json"
+                if [ ! -f "${stream_json}" ]; then
+                    continue
+                fi
+                iso_file="${prefix}-aarch64.iso"
+                iso_path="${ISO_DIR_WRITABLE}/${iso_file}"
+                if ! oc image extract \
+                    --certificate-authority=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem \
+                    --registry-config=/run/secrets/auth.json \
+                    --path="/coreos/${iso_file}:${ISO_DIR_WRITABLE}/" \
+                    --filter-by-os=linux/arm64 \
+                    --confirm \
+                    "${mirror_args[@]}" \
+                    "${MACHINE_OS_IMAGES_IMAGE}"; then
+                    echo "failed to extract aarch64 ISO for ${prefix}" >&2
+                    exit 1
+                fi
+                if [ ! -f "${iso_path}" ]; then
+                    echo "failed to extract aarch64 ISO for ${prefix}: ${iso_path} file does not exist" >&2
+                    rm -f "${iso_path}.sha256"
+                    exit 1
+                fi
+                expected_sha256="$(jq -r ".architectures.aarch64.artifacts.metal.formats.iso.disk.sha256" "${stream_json}")"
+                if ! verify_iso_checksum "${iso_path}" "${expected_sha256}"; then
+                    echo "failed to validate aarch64 ISO for ${prefix}" >&2
+                    exit 1
+                fi
+            done
+        else
+            echo "${MACHINE_OS_IMAGES_IMAGE} has no linux/arm64 variant. Skipping aarch64 iso extraction." >&2
+        fi
     else
         echo "MACHINE_OS_IMAGES_IMAGE is unset.  Skipping aarch64 iso extraction."
     fi
