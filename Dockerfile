@@ -1,4 +1,4 @@
-FROM registry.ci.openshift.org/ocp/5.0:installer AS builder
+FROM registry.ci.openshift.org/ocp/5.1:installer AS builder
 
 ARG DIRECT_DOWNLOAD=false
 ARG COREOS_VERSIONS=9,10
