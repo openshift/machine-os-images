@@ -5,12 +5,23 @@ set -e
 script_dir="$(dirname "$0")"
 arch="$(uname -p)"
 
-# COREOS_VERSION selects which version the ironic-python-agent symlinks point to.
-# Default: empty (version 9) for backward compatibility.
+# COREOS_VERSION selects which version the default ironic-python-agent
+# symlinks point to. When unset, prefer 9 if it is bundled (OCP) and fall
+# back to 10 (OKD/SCOS only ships centos-10).
 COREOS_VERSION="${COREOS_VERSION:-}"
+if [[ -z "${COREOS_VERSION}" ]]; then
+    if [[ -f /coreos/coreos-stream.json ]]; then
+        COREOS_VERSION=9
+    elif [[ -f /coreos/coreos10-stream.json ]]; then
+        COREOS_VERSION=10
+    else
+        echo "No CoreOS stream metadata found in this image" >&2
+        exit 1
+    fi
+fi
 
 case "${COREOS_VERSION}" in
-    ""|9) version_prefix="" ;;
+    9) version_prefix="" ;;
     10) version_prefix="10" ;;
     *)
         echo "Unknown COREOS_VERSION: ${COREOS_VERSION}" >&2
@@ -20,10 +31,12 @@ esac
 
 coreos_name="coreos${version_prefix}"
 
-if [ ! -f "/coreos/${coreos_name}-stream.json" ]; then
-    echo "CoreOS version ${COREOS_VERSION:-9} is not bundled in this image (missing /coreos/${coreos_name}-stream.json)" >&2
+if [[ ! -f "/coreos/${coreos_name}-stream.json" ]]; then
+    echo "CoreOS version ${COREOS_VERSION} is not bundled in this image (missing /coreos/${coreos_name}-stream.json)" >&2
     exit 1
 fi
+
+echo "Using CoreOS version ${COREOS_VERSION} (${coreos_name})" >&2
 
 custom=false
 fixed=false
@@ -136,52 +149,57 @@ fi
 
 # Create stream-prefixed IPA symlinks for all available CoreOS versions.
 # These allow the image-customization-controller to discover images by OS
-# stream (e.g., rhel-9, rhel-10) via the coreos.openshift.io/stream label.
+# stream (e.g., rhel-9, rhel-10, centos-10) via the coreos.openshift.io/stream
+# label. coreos10 is published as both rhel-10 (OCP) and centos-10 (OKD/SCOS).
 for prefix in coreos coreos10; do
     stream_json="/coreos/${prefix}-stream.json"
     if [ ! -f "${stream_json}" ]; then
         continue
     fi
 
+    streams=()
     case "${prefix}" in
-        coreos) stream="rhel-9" ;;
-        coreos10) stream="rhel-10" ;;
+        coreos) streams=(rhel-9) ;;
+        coreos10) streams=(rhel-10 centos-10) ;;
+        *) continue ;;
     esac
 
-    if [ $custom = true ]; then
-        ln -f -s "${prefix}-${arch}.iso" "${DEST_DIR}/ironic-python-agent-${stream}.iso"
-        ln -f -s "${prefix}-${arch}.iso" "${DEST_DIR}/ironic-python-agent-${stream}_${arch}.iso"
-        ln -f -s "${prefix}-${arch}-initrd.img" "${DEST_DIR}/ironic-python-agent-${stream}.initramfs"
-        ln -f -s "${prefix}-${arch}-initrd.img" "${DEST_DIR}/ironic-python-agent-${stream}_${arch}.initramfs"
+    for stream in "${streams[@]}"; do
+        if [ $custom = true ]; then
+            ln -f -s "${prefix}-${arch}.iso" "${DEST_DIR}/ironic-python-agent-${stream}.iso"
+            ln -f -s "${prefix}-${arch}.iso" "${DEST_DIR}/ironic-python-agent-${stream}_${arch}.iso"
+            ln -f -s "${prefix}-${arch}-initrd.img" "${DEST_DIR}/ironic-python-agent-${stream}.initramfs"
+            ln -f -s "${prefix}-${arch}-initrd.img" "${DEST_DIR}/ironic-python-agent-${stream}_${arch}.initramfs"
 
-        if [[ "${arch}" == "x86_64" ]]; then
-            if [ -f "${DEST_DIR}/${prefix}-aarch64.iso" ]; then
-                ln -f -s "${prefix}-aarch64.iso" "${DEST_DIR}/ironic-python-agent-${stream}_aarch64.iso"
-            fi
-            if [ -f "${DEST_DIR}/${prefix}-aarch64-initrd.img" ]; then
-                ln -f -s "${prefix}-aarch64-initrd.img" "${DEST_DIR}/ironic-python-agent-${stream}_aarch64.initramfs"
+            if [[ "${arch}" == "x86_64" ]]; then
+                if [ -f "${DEST_DIR}/${prefix}-aarch64.iso" ]; then
+                    ln -f -s "${prefix}-aarch64.iso" "${DEST_DIR}/ironic-python-agent-${stream}_aarch64.iso"
+                fi
+                if [ -f "${DEST_DIR}/${prefix}-aarch64-initrd.img" ]; then
+                    ln -f -s "${prefix}-aarch64-initrd.img" "${DEST_DIR}/ironic-python-agent-${stream}_aarch64.initramfs"
+                fi
             fi
         fi
-    fi
 
-    if [ $fixed = true ]; then
-        ln -f -s "${prefix}-${arch}-vmlinuz" "${DEST_DIR}/ironic-python-agent-${stream}.kernel"
-        ln -f -s "${prefix}-${arch}-vmlinuz" "${DEST_DIR}/ironic-python-agent-${stream}_${arch}.kernel"
-        ln -f -s "${prefix}-${arch}-initrd.img" "${DEST_DIR}/ironic-python-agent-${stream}.initramfs"
-        ln -f -s "${prefix}-${arch}-initrd.img" "${DEST_DIR}/ironic-python-agent-${stream}_${arch}.initramfs"
-        ln -f -s "${prefix}-${arch}-rootfs.img" "${DEST_DIR}/ironic-python-agent-${stream}.rootfs"
-        ln -f -s "${prefix}-${arch}-rootfs.img" "${DEST_DIR}/ironic-python-agent-${stream}_${arch}.rootfs"
+        if [ $fixed = true ]; then
+            ln -f -s "${prefix}-${arch}-vmlinuz" "${DEST_DIR}/ironic-python-agent-${stream}.kernel"
+            ln -f -s "${prefix}-${arch}-vmlinuz" "${DEST_DIR}/ironic-python-agent-${stream}_${arch}.kernel"
+            ln -f -s "${prefix}-${arch}-initrd.img" "${DEST_DIR}/ironic-python-agent-${stream}.initramfs"
+            ln -f -s "${prefix}-${arch}-initrd.img" "${DEST_DIR}/ironic-python-agent-${stream}_${arch}.initramfs"
+            ln -f -s "${prefix}-${arch}-rootfs.img" "${DEST_DIR}/ironic-python-agent-${stream}.rootfs"
+            ln -f -s "${prefix}-${arch}-rootfs.img" "${DEST_DIR}/ironic-python-agent-${stream}_${arch}.rootfs"
 
-        if [[ "${arch}" == "x86_64" ]]; then
-            if [ -f "${DEST_DIR}/${prefix}-aarch64-vmlinuz" ]; then
-                ln -f -s "${prefix}-aarch64-vmlinuz" "${DEST_DIR}/ironic-python-agent-${stream}_aarch64.kernel"
-            fi
-            if [ -f "${DEST_DIR}/${prefix}-aarch64-initrd.img" ]; then
-                ln -f -s "${prefix}-aarch64-initrd.img" "${DEST_DIR}/ironic-python-agent-${stream}_aarch64.initramfs"
-            fi
-            if [ -f "${DEST_DIR}/${prefix}-aarch64-rootfs.img" ]; then
-                ln -f -s "${prefix}-aarch64-rootfs.img" "${DEST_DIR}/ironic-python-agent-${stream}_aarch64.rootfs"
+            if [[ "${arch}" == "x86_64" ]]; then
+                if [ -f "${DEST_DIR}/${prefix}-aarch64-vmlinuz" ]; then
+                    ln -f -s "${prefix}-aarch64-vmlinuz" "${DEST_DIR}/ironic-python-agent-${stream}_aarch64.kernel"
+                fi
+                if [ -f "${DEST_DIR}/${prefix}-aarch64-initrd.img" ]; then
+                    ln -f -s "${prefix}-aarch64-initrd.img" "${DEST_DIR}/ironic-python-agent-${stream}_aarch64.initramfs"
+                fi
+                if [ -f "${DEST_DIR}/${prefix}-aarch64-rootfs.img" ]; then
+                    ln -f -s "${prefix}-aarch64-rootfs.img" "${DEST_DIR}/ironic-python-agent-${stream}_aarch64.rootfs"
+                fi
             fi
         fi
-    fi
+    done
 done
